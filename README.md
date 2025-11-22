@@ -1,6 +1,6 @@
 # Night Mode Heating Control (OTGateway)
 
-This blueprint allows you to automatically set a lower heating temperature at a specified time (night mode) and restore the original temperature at another time (day mode). It is designed for use with OpenTherm Gateway (OTGateway) but works with any `climate` entity.
+This blueprint allows you to automatically set a lower heating temperature at a specified time (night mode) and restore the original temperature at another time (day mode). It is designed for use with OpenTherm Gateway (OTGateway) (I use [Laxilef](https://github.com/Laxilef/OTGateway)) but works with any `climate` entity.
 
 ## Features
 
