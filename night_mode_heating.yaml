@@ -81,6 +81,12 @@ blueprint:
           unit_of_measurement: °C
           mode: slider
       default: 21
+    notifications_enabled:
+      name: Enable Notifications
+      description: Send notifications when mode changes
+      selector:
+        boolean: {}
+      default: true
 variables:
   climate_entity: !input climate_entity
   use_weekday_schedule: !input use_weekday_schedule
@@ -92,6 +98,7 @@ variables:
   weekend_night_end_time: !input weekend_night_end_time
   night_temperature: !input night_temperature
   day_temperature: !input day_temperature
+  notifications_enabled: !input notifications_enabled
   is_weekday: '{{ now().weekday() < 5 }}'
   current_night_start: '{% if use_weekday_schedule %}{{ weekday_night_start_time if
     is_weekday else weekend_night_start_time }}{% else %}{{ night_start_time }}{%
@@ -135,10 +142,14 @@ action:
         entity_id: '{{ climate_entity }}'
       data:
         temperature: '{{ night_temperature }}'
-    - service: notify.notify
-      data:
-        title: "\U0001F319 Night Mode Activated"
-        message: Heating temperature set to {{ night_temperature }}°C
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: "\U0001F319 Night Mode Activated"
+          message: Heating temperature set to {{ night_temperature }}°C
   - conditions:
     - condition: trigger
       id:
@@ -151,10 +162,14 @@ action:
         entity_id: '{{ climate_entity }}'
       data:
         temperature: '{{ night_temperature }}'
-    - service: notify.notify
-      data:
-        title: "\U0001F319 Weekday Night Mode Activated"
-        message: Heating temperature set to {{ night_temperature }}°C (Weekday)
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: "\U0001F319 Weekday Night Mode Activated"
+          message: Heating temperature set to {{ night_temperature }}°C (Weekday)
   - conditions:
     - condition: trigger
       id:
@@ -167,10 +182,14 @@ action:
         entity_id: '{{ climate_entity }}'
       data:
         temperature: '{{ night_temperature }}'
-    - service: notify.notify
-      data:
-        title: "\U0001F319 Weekend Night Mode Activated"
-        message: Heating temperature set to {{ night_temperature }}°C (Weekend)
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: "\U0001F319 Weekend Night Mode Activated"
+          message: Heating temperature set to {{ night_temperature }}°C (Weekend)
   - conditions:
     - condition: trigger
       id:
@@ -183,10 +202,14 @@ action:
         entity_id: '{{ climate_entity }}'
       data:
         temperature: '{{ day_temperature }}'
-    - service: notify.notify
-      data:
-        title: ☀️ Day Mode Activated
-        message: Heating temperature set to {{ day_temperature }}°C
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: ☀️ Day Mode Activated
+          message: Heating temperature set to {{ day_temperature }}°C
   - conditions:
     - condition: trigger
       id:
@@ -199,10 +222,14 @@ action:
         entity_id: '{{ climate_entity }}'
       data:
         temperature: '{{ day_temperature }}'
-    - service: notify.notify
-      data:
-        title: ☀️ Weekday Day Mode Activated
-        message: Heating temperature set to {{ day_temperature }}°C (Weekday)
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: ☀️ Weekday Day Mode Activated
+          message: Heating temperature set to {{ day_temperature }}°C (Weekday)
   - conditions:
     - condition: trigger
       id:
@@ -215,8 +242,12 @@ action:
         entity_id: '{{ climate_entity }}'
       data:
         temperature: '{{ day_temperature }}'
-    - service: notify.notify
-      data:
-        title: ☀️ Weekend Day Mode Activated
-        message: Heating temperature set to {{ day_temperature }}°C (Weekend)
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: ☀️ Weekend Day Mode Activated
+          message: Heating temperature set to {{ day_temperature }}°C (Weekend)
 mode: single
