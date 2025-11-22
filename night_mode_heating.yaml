@@ -1,0 +1,225 @@
+blueprint:
+  name: Night Mode Heating Control (OTGateway)
+  description: Automatically sets lower heating temperature at specified time and restores original temperature at another time. Useful for nighttime heating optimization with OTGateway. Supports different schedules for different days of the week.
+  domain: automation
+  author: lachyn
+  source_url: https://github.com/lachyn/ha-blueprints/blob/main/night_mode_heating.yaml
+  input:
+    climate_entity:
+      name: Climate Entity
+      description: The climate entity for heating control (e.g., climate.opentherm_heating)
+      selector:
+        entity:
+          multiple: false
+          filter:
+          - domain:
+            - climate
+          reorder: false
+    night_start_time:
+      name: Night Mode Start Time (Default)
+      description: Time when night mode should activate (e.g., 23:00)
+      selector:
+        time:
+      default: "23:00"
+    night_end_time:
+      name: Night Mode End Time (Default)
+      description: Time when night mode should deactivate (e.g., 06:00)
+      selector:
+        time:
+      default: "06:00"
+    use_weekday_schedule:
+      name: Use Different Schedule for Different Days
+      description: Enable to set different times for weekdays and weekends
+      selector:
+        boolean:
+      default: false
+    weekday_night_start_time:
+      name: Weekday Night Start Time (Mon-Fri)
+      description: Time when night mode should activate on weekdays
+      selector:
+        time:
+      default: "23:30"
+    weekday_night_end_time:
+      name: Weekday Night End Time (Mon-Fri)
+      description: Time when night mode should deactivate on weekdays
+      selector:
+        time:
+      default: "05:30"
+    weekend_night_start_time:
+      name: Weekend Night Start Time (Sat-Sun)
+      description: Time when night mode should activate on weekends
+      selector:
+        time:
+      default: "00:00"
+    weekend_night_end_time:
+      name: Weekend Night End Time (Sat-Sun)
+      description: Time when night mode should deactivate on weekends
+      selector:
+        time:
+      default: "08:00"
+    night_temperature:
+      name: Night Temperature
+      description: Target temperature for night mode
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+          unit_of_measurement: "°C"
+      default: 16
+    day_temperature:
+      name: Day Temperature
+      description: Target temperature for day mode (normal operation)
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+          unit_of_measurement: "°C"
+      default: 21
+
+variables:
+  climate_entity: !input climate_entity
+  use_weekday_schedule: !input use_weekday_schedule
+  night_start_time: !input night_start_time
+  night_end_time: !input night_end_time
+  weekday_night_start_time: !input weekday_night_start_time
+  weekday_night_end_time: !input weekday_night_end_time
+  weekend_night_start_time: !input weekend_night_start_time
+  weekend_night_end_time: !input weekend_night_end_time
+  night_temperature: !input night_temperature
+  day_temperature: !input day_temperature
+  is_weekday: "{{ now().weekday() < 5 }}"
+  current_night_start: "{% if use_weekday_schedule %}{{ weekday_night_start_time if is_weekday else weekend_night_start_time }}{% else %}{{ night_start_time }}{% endif %}"
+  current_night_end: "{% if use_weekday_schedule %}{{ weekday_night_end_time if is_weekday else weekend_night_end_time }}{% else %}{{ night_end_time }}{% endif %}"
+
+trigger:
+  - platform: time
+    at: !input night_start_time
+    id: activate_night_mode_default
+  - platform: time
+    at: !input night_end_time
+    id: deactivate_night_mode_default
+  - platform: time
+    at: !input weekday_night_start_time
+    id: activate_night_mode_weekday
+  - platform: time
+    at: !input weekday_night_end_time
+    id: deactivate_night_mode_weekday
+  - platform: time
+    at: !input weekend_night_start_time
+    id: activate_night_mode_weekend
+  - platform: time
+    at: !input weekend_night_end_time
+    id: deactivate_night_mode_weekend
+
+condition:
+  - condition: template
+    value_template: "{{ states(climate_entity) != 'unavailable' and states(climate_entity) != 'unknown' }}"
+
+action:
+  - choose:
+      # Activate night mode - default
+      - conditions:
+          - condition: trigger
+            id: 
+              - activate_night_mode_default
+          - condition: template
+            value_template: "{{ not use_weekday_schedule }}"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: "{{ climate_entity }}"
+            data:
+              temperature: "{{ night_temperature }}"
+          - service: notify.notify
+            data:
+              title: "🌙 Night Mode Activated"
+              message: "Heating temperature set to {{ night_temperature }}°C"
+      # Activate night mode - weekday
+      - conditions:
+          - condition: trigger
+            id: 
+              - activate_night_mode_weekday
+          - condition: template
+            value_template: "{{ use_weekday_schedule and is_weekday }}"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: "{{ climate_entity }}"
+            data:
+              temperature: "{{ night_temperature }}"
+          - service: notify.notify
+            data:
+              title: "🌙 Weekday Night Mode Activated"
+              message: "Heating temperature set to {{ night_temperature }}°C (Weekday)"
+      # Activate night mode - weekend
+      - conditions:
+          - condition: trigger
+            id: 
+              - activate_night_mode_weekend
+          - condition: template
+            value_template: "{{ use_weekday_schedule and not is_weekday }}"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: "{{ climate_entity }}"
+            data:
+              temperature: "{{ night_temperature }}"
+          - service: notify.notify
+            data:
+              title: "🌙 Weekend Night Mode Activated"
+              message: "Heating temperature set to {{ night_temperature }}°C (Weekend)"
+      # Deactivate night mode - default
+      - conditions:
+          - condition: trigger
+            id: 
+              - deactivate_night_mode_default
+          - condition: template
+            value_template: "{{ not use_weekday_schedule }}"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: "{{ climate_entity }}"
+            data:
+              temperature: "{{ day_temperature }}"
+          - service: notify.notify
+            data:
+              title: "☀️ Day Mode Activated"
+              message: "Heating temperature set to {{ day_temperature }}°C"
+      # Deactivate night mode - weekday
+      - conditions:
+          - condition: trigger
+            id: 
+              - deactivate_night_mode_weekday
+          - condition: template
+            value_template: "{{ use_weekday_schedule and is_weekday }}"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: "{{ climate_entity }}"
+            data:
+              temperature: "{{ day_temperature }}"
+          - service: notify.notify
+            data:
+              title: "☀️ Weekday Day Mode Activated"
+              message: "Heating temperature set to {{ day_temperature }}°C (Weekday)"
+      # Deactivate night mode - weekend
+      - conditions:
+          - condition: trigger
+            id: 
+              - deactivate_night_mode_weekend
+          - condition: template
+            value_template: "{{ use_weekday_schedule and not is_weekday }}"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: "{{ climate_entity }}"
+            data:
+              temperature: "{{ day_temperature }}"
+          - service: notify.notify
+            data:
+              title: "☀️ Weekend Day Mode Activated"
+              message: "Heating temperature set to {{ day_temperature }}°C (Weekend)"
+
+mode: single
