@@ -1,79 +1,13 @@
-# Night Mode Heating Control (OTGateway)
+# Home Assistant Blueprints by Lachyn
 
-This blueprint allows you to automatically set a lower heating temperature at a specified time (night mode) and restore the original temperature at another time (day mode). It is designed for use with OpenTherm Gateway (OTGateway) (I use [Laxilef](https://github.com/Laxilef/OTGateway)) but works with any `climate` entity.
+Welcome to my collection of Home Assistant blueprints. These blueprints are designed to help you automate your home heating and hot water systems with ease.
 
-## Features
+## Available Blueprints
 
-- 🌙 **Night Mode**: Automatically lowers the temperature at night to save energy.
-- ☀️ **Day Mode**: Automatically restores the comfort temperature in the morning.
-- 📅 **Flexible Scheduling**: Supports different schedules for weekdays (Mon-Fri) and weekends (Sat-Sun).
-- 🔔 **Notifications**: Sends notifications when the mode changes (optional).
-
-## Installation
-
-Click the button below to import this blueprint into your Home Assistant instance:
-
-[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint URL pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Flachyn%2Fha-blueprints%2Fblob%2Fmain%2Fnight_mode_heating.yaml)
-
-## Configuration
-
-### Inputs
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| **Climate Entity** | The climate entity to control (e.g., `climate.opentherm_heating`). | Required |
-| **Use Different Schedule for Different Days** | Enable to set different times for weekdays and weekends. | `false` |
-| **Night Mode Start Time (Default)** | Time when night mode activates (if weekday schedule is disabled). | `23:00` |
-| **Night Mode End Time (Default)** | Time when night mode deactivates (if weekday schedule is disabled). | `06:00` |
-| **Weekday Night Start Time** | Time when night mode activates on weekdays (Mon-Fri). | `23:30` |
-| **Weekday Night End Time** | Time when night mode deactivates on weekdays (Mon-Fri). | `05:30` |
-| **Weekend Night Start Time** | Time when night mode activates on weekends (Sat-Sun). | `00:00` |
-| **Weekend Night End Time** | Time when night mode deactivates on weekends (Sat-Sun). | `08:00` |
-| **Night Temperature** | Target temperature for night mode. | `16°C` |
-| **Day Temperature** | Target temperature for day mode. | `21°C` |
-| **Enable Notifications** | Send notifications when mode changes. | `true` |
-
-# DHW Control with Legionella Protection
-
-This blueprint allows you to control Domestic Hot Water (DHW) temperature based on Day/Night schedules for Weekdays and Weekends. It also includes a weekly Legionella protection cycle.
-
-## Features
-
-- 🚿 **DHW Control**: Supports `climate` or `water_heater` entities.
-- 📅 **Day/Night Schedule**: Separate start/end times for Weekdays and Weekends.
-- 🦠 **Legionella Protection**: Weekly cycle to raise temperature for protection.
-- 🔔 **Notifications**: Sends notifications on mode changes and Legionella cycle (optional).
-
-## Installation
-
-Click the button below to import this blueprint into your Home Assistant instance:
-
-[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint URL pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Flachyn%2Fha-blueprints%2Fblob%2Fmain%2Fdhw_control.yaml)
-
-## Configuration
-
-### Inputs
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| **DHW Entity** | The entity to control (`climate` or `water_heater`). | Required |
-| **Day (Comfort) Temperature** | Target temperature during active hours. | `50°C` |
-| **Night (Eco) Temperature** | Target temperature during inactive hours. | `40°C` |
-| **Weekday Day Start** | Time when Day mode starts on weekdays. | `06:00` |
-| **Weekday Day End** | Time when Day mode ends on weekdays. | `22:00` |
-| **Weekend Day Start** | Time when Day mode starts on weekends. | `07:00` |
-| **Weekend Day End** | Time when Day mode ends on weekends. | `23:00` |
-| **Enable Legionella Protection** | Enable the weekly anti-legionella cycle. | `true` |
-| **Legionella Temperature** | Target temperature for the Legionella cycle. | `60°C` |
-| **Legionella Day** | Day of the week to run the Legionella cycle. | `Sunday` |
-| **Legionella Start Time** | Time to start the Legionella cycle. | `04:00` |
-| **Legionella Duration** | How long to maintain the Legionella temperature. | `1 hour` |
-| **Enable Notifications** | Send notifications when mode changes. | `true` |
-
-## Requirements
-
-- A working Home Assistant installation.
-- A configured `climate` entity (e.g., via MQTT, OpenTherm Gateway, or other integration).
+| Blueprint | Description | Import | Documentation |
+|-----------|-------------|--------|---------------|
+| **Night Mode Heating Control** | Automatically sets lower heating temperature at night and restores it in the morning. Supports weekday/weekend schedules. | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Flachyn%2Fha-blueprints%2Fblob%2Fmain%2Fnight_mode_heating.yaml) | [Read More](night_mode_heating.md) |
+| **DHW Control with Legionella Protection** | Controls DHW temperature with day/night schedules and a weekly Legionella protection cycle. | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Flachyn%2Fha-blueprints%2Fblob%2Fmain%2Fdhw_control.yaml) | [Read More](dhw_control.md) |
 
 ## Author
 

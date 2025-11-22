@@ -1,8 +1,10 @@
 blueprint:
   name: DHW Control with Legionella Protection
-  description: >
-    Control Domestic Hot Water (DHW) temperature based on Day/Night schedules for Weekdays and Weekends.
-    Includes a weekly Legionella protection cycle that raises the temperature to a specified level for a set duration.
+  description: 'Control Domestic Hot Water (DHW) temperature based on Day/Night schedules
+    for Weekdays and Weekends. Includes a weekly Legionella protection cycle that
+    raises the temperature to a specified level for a set duration.
+
+    '
   domain: automation
   input:
     dhw_entity:
@@ -11,16 +13,18 @@ blueprint:
       selector:
         entity:
           domain:
-            - climate
-            - water_heater
+          - climate
+          - water_heater
+          multiple: false
+          reorder: false
     day_temp:
       name: Day (Comfort) Temperature
       description: Target temperature during active hours.
       default: 50
       selector:
         number:
-          min: 20
-          max: 80
+          min: 20.0
+          max: 80.0
           step: 0.5
           unit_of_measurement: °C
           mode: slider
@@ -30,33 +34,33 @@ blueprint:
       default: 40
       selector:
         number:
-          min: 20
-          max: 80
+          min: 20.0
+          max: 80.0
           step: 0.5
           unit_of_measurement: °C
           mode: slider
     weekday_day_start:
       name: Weekday Day Start
       description: Time when Day mode starts on weekdays (Mon-Fri).
-      default: "06:00:00"
+      default: 06:00:00
       selector:
         time: {}
     weekday_day_end:
       name: Weekday Day End
       description: Time when Day mode ends on weekdays (Mon-Fri).
-      default: "22:00:00"
+      default: '22:00:00'
       selector:
         time: {}
     weekend_day_start:
       name: Weekend Day Start
       description: Time when Day mode starts on weekends (Sat-Sun).
-      default: "07:00:00"
+      default: 07:00:00
       selector:
         time: {}
     weekend_day_end:
       name: Weekend Day End
       description: Time when Day mode ends on weekends (Sat-Sun).
-      default: "23:00:00"
+      default: '23:00:00'
       selector:
         time: {}
     legionella_enabled:
@@ -71,36 +75,39 @@ blueprint:
       default: 60
       selector:
         number:
-          min: 55
-          max: 80
+          min: 55.0
+          max: 80.0
           step: 0.5
           unit_of_measurement: °C
           mode: slider
     legionella_day:
       name: Legionella Day
       description: Day of the week to run the Legionella cycle.
-      default: "sun"
+      default: sun
       selector:
         select:
           options:
-            - label: Monday
-              value: "mon"
-            - label: Tuesday
-              value: "tue"
-            - label: Wednesday
-              value: "wed"
-            - label: Thursday
-              value: "thu"
-            - label: Friday
-              value: "fri"
-            - label: Saturday
-              value: "sat"
-            - label: Sunday
-              value: "sun"
+          - label: Monday
+            value: mon
+          - label: Tuesday
+            value: tue
+          - label: Wednesday
+            value: wed
+          - label: Thursday
+            value: thu
+          - label: Friday
+            value: fri
+          - label: Saturday
+            value: sat
+          - label: Sunday
+            value: sun
+          multiple: false
+          sort: false
+          custom_value: false
     legionella_start_time:
       name: Legionella Start Time
       description: Time to start the Legionella cycle.
-      default: "04:00:00"
+      default: 04:00:00
       selector:
         time: {}
     legionella_duration:
@@ -118,7 +125,7 @@ blueprint:
       default: true
       selector:
         boolean: {}
-
+  source_url: https://github.com/lachyn/ha-blueprints/blob/main/dhw_control.yaml
 variables:
   dhw_entity: !input dhw_entity
   day_temp: !input day_temp
@@ -132,118 +139,93 @@ variables:
   legionella_day: !input legionella_day
   legionella_duration: !input legionella_duration
   notifications_enabled: !input notifications_enabled
-
 trigger:
-  - platform: time
-    at: !input weekday_day_start
-    id: schedule
-  - platform: time
-    at: !input weekday_day_end
-    id: schedule
-  - platform: time
-    at: !input weekend_day_start
-    id: schedule
-  - platform: time
-    at: !input weekend_day_end
-    id: schedule
-  - platform: time
-    at: !input legionella_start_time
-    id: legionella
-
+- platform: time
+  at: !input weekday_day_start
+  id: schedule
+- platform: time
+  at: !input weekday_day_end
+  id: schedule
+- platform: time
+  at: !input weekend_day_start
+  id: schedule
+- platform: time
+  at: !input weekend_day_end
+  id: schedule
+- platform: time
+  at: !input legionella_start_time
+  id: legionella
 action:
-  - choose:
-      # Legionella Cycle
-      - conditions:
-          - condition: trigger
-            id: legionella
-          - condition: template
-            value_template: "{{ legionella_enabled }}"
-          - condition: template
-            value_template: "{{ now().strftime('%a').lower() == legionella_day }}"
-        sequence:
-          - service: "{{ 'climate.set_temperature' if dhw_entity.startswith('climate.') else 'water_heater.set_temperature' }}"
-            target:
-              entity_id: !input dhw_entity
-            data:
-              temperature: !input legionella_temp
-          - if:
-              - condition: template
-                value_template: "{{ notifications_enabled }}"
-            then:
-              - service: notify.notify
-                data:
-                  title: "🦠 Legionella Cycle Started"
-                  message: "DHW temperature set to {{ legionella_temp }}°C for protection."
-          - delay: !input legionella_duration
-          # After delay, fall through to restore schedule (we'll call the restore logic explicitly)
-          - alias: "Restore Schedule after Legionella"
-            service: "{{ 'climate.set_temperature' if dhw_entity.startswith('climate.') else 'water_heater.set_temperature' }}"
-            target:
-              entity_id: !input dhw_entity
-            data:
-              temperature: >
-                {% set t = now().time() %}
-                {% set d = now().weekday() %}
-                {% set is_weekend = d >= 5 %}
-                {% if is_weekend %}
-                  {% set start = strptime(weekend_day_start, '%H:%M:%S').time() %}
-                  {% set end = strptime(weekend_day_end, '%H:%M:%S').time() %}
-                {% else %}
-                  {% set start = strptime(weekday_day_start, '%H:%M:%S').time() %}
-                  {% set end = strptime(weekday_day_end, '%H:%M:%S').time() %}
-                {% endif %}
-                
-                {% if start < end %}
-                  {% set is_active = start <= t < end %}
-                {% else %}
-                  {% set is_active = start <= t or t < end %}
-                {% endif %}
-                
-                {{ day_temp if is_active else night_temp }}
-          - if:
-              - condition: template
-                value_template: "{{ notifications_enabled }}"
-            then:
-              - service: notify.notify
-                data:
-                  title: "✅ Legionella Cycle Finished"
-                  message: "DHW temperature restored to schedule."
-
-      # Regular Schedule Change
-      - conditions:
-          - condition: trigger
-            id: schedule
-        sequence:
-          - service: "{{ 'climate.set_temperature' if dhw_entity.startswith('climate.') else 'water_heater.set_temperature' }}"
-            target:
-              entity_id: !input dhw_entity
-            data:
-              temperature: >
-                {% set t = now().time() %}
-                {% set d = now().weekday() %}
-                {% set is_weekend = d >= 5 %}
-                {% if is_weekend %}
-                  {% set start = strptime(weekend_day_start, '%H:%M:%S').time() %}
-                  {% set end = strptime(weekend_day_end, '%H:%M:%S').time() %}
-                {% else %}
-                  {% set start = strptime(weekday_day_start, '%H:%M:%S').time() %}
-                  {% set end = strptime(weekday_day_end, '%H:%M:%S').time() %}
-                {% endif %}
-                
-                {% if start < end %}
-                  {% set is_active = start <= t < end %}
-                {% else %}
-                  {% set is_active = start <= t or t < end %}
-                {% endif %}
-                
-                {{ day_temp if is_active else night_temp }}
-          - if:
-              - condition: template
-                value_template: "{{ notifications_enabled }}"
-            then:
-              - service: notify.notify
-                data:
-                  title: "🚿 DHW Schedule Update"
-                  message: "DHW temperature set to {{ day_temp if is_active else night_temp }}°C."
-
+- choose:
+  - conditions:
+    - condition: trigger
+      id: legionella
+    - condition: template
+      value_template: '{{ legionella_enabled }}'
+    - condition: template
+      value_template: '{{ now().strftime(''%a'').lower() == legionella_day }}'
+    sequence:
+    - service: '{{ ''climate.set_temperature'' if dhw_entity.startswith(''climate.'')
+        else ''water_heater.set_temperature'' }}'
+      target:
+        entity_id: !input dhw_entity
+      data:
+        temperature: !input legionella_temp
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: "\U0001F9A0 Legionella Cycle Started"
+          message: DHW temperature set to {{ legionella_temp }}°C for protection.
+    - delay: !input legionella_duration
+    - alias: Restore Schedule after Legionella
+      service: '{{ ''climate.set_temperature'' if dhw_entity.startswith(''climate.'')
+        else ''water_heater.set_temperature'' }}'
+      target:
+        entity_id: !input dhw_entity
+      data:
+        temperature: "{% set t = now().time() %} {% set d = now().weekday() %} {%
+          set is_weekend = d >= 5 %} {% if is_weekend %}\n  {% set start = strptime(weekend_day_start,
+          '%H:%M:%S').time() %}\n  {% set end = strptime(weekend_day_end, '%H:%M:%S').time()
+          %}\n{% else %}\n  {% set start = strptime(weekday_day_start, '%H:%M:%S').time()
+          %}\n  {% set end = strptime(weekday_day_end, '%H:%M:%S').time() %}\n{% endif
+          %}\n{% if start < end %}\n  {% set is_active = start <= t < end %}\n{% else
+          %}\n  {% set is_active = start <= t or t < end %}\n{% endif %}\n{{ day_temp
+          if is_active else night_temp }}\n"
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: ✅ Legionella Cycle Finished
+          message: DHW temperature restored to schedule.
+  - conditions:
+    - condition: trigger
+      id: schedule
+    sequence:
+    - service: '{{ ''climate.set_temperature'' if dhw_entity.startswith(''climate.'')
+        else ''water_heater.set_temperature'' }}'
+      target:
+        entity_id: !input dhw_entity
+      data:
+        temperature: "{% set t = now().time() %} {% set d = now().weekday() %} {%
+          set is_weekend = d >= 5 %} {% if is_weekend %}\n  {% set start = strptime(weekend_day_start,
+          '%H:%M:%S').time() %}\n  {% set end = strptime(weekend_day_end, '%H:%M:%S').time()
+          %}\n{% else %}\n  {% set start = strptime(weekday_day_start, '%H:%M:%S').time()
+          %}\n  {% set end = strptime(weekday_day_end, '%H:%M:%S').time() %}\n{% endif
+          %}\n{% if start < end %}\n  {% set is_active = start <= t < end %}\n{% else
+          %}\n  {% set is_active = start <= t or t < end %}\n{% endif %}\n{{ day_temp
+          if is_active else night_temp }}\n"
+    - if:
+      - condition: template
+        value_template: '{{ notifications_enabled }}'
+      then:
+      - service: notify.notify
+        data:
+          title: "\U0001F6BF DHW Schedule Update"
+          message: DHW temperature set to {{ day_temp if is_active else night_temp
+            }}°C.
 mode: single
