@@ -17,6 +17,26 @@ blueprint:
           - domain:
             - climate
           reorder: false
+    heating_max_temp_entity:
+      name: Heating Maximum Temperature Entity
+      description: Entity that contains the maximum allowed heating temperature (e.g., number.opentherm_heating_max_temp).
+      selector:
+        entity:
+          domain:
+          - number
+          - input_number
+          multiple: false
+      default: ''
+    heating_min_temp_entity:
+      name: Heating Minimum Temperature Entity
+      description: Entity that contains the minimum allowed heating temperature (e.g., number.opentherm_heating_min_temp).
+      selector:
+        entity:
+          domain:
+          - number
+          - input_number
+          multiple: false
+      default: ''
     weekday_night_start_time:
       name: Weekday Night Start Time (Mon-Fri)
       description: Time when night mode should activate on weekdays
@@ -71,6 +91,20 @@ blueprint:
       default: true
 variables:
   climate_entity: !input climate_entity
+  heating_max_temp_entity: !input heating_max_temp_entity
+  heating_min_temp_entity: !input heating_min_temp_entity
+  heating_max_temp: >-
+    {% if heating_max_temp_entity != '' %}
+      {{ states(heating_max_temp_entity) | float(30) }}
+    {% else %}
+      30
+    {% endif %}
+  heating_min_temp: >-
+    {% if heating_min_temp_entity != '' %}
+      {{ states(heating_min_temp_entity) | float(10) }}
+    {% else %}
+      10
+    {% endif %}
   weekday_night_start_time: !input weekday_night_start_time
   weekday_night_end_time: !input weekday_night_end_time
   weekend_night_start_time: !input weekend_night_start_time
@@ -109,7 +143,7 @@ action:
       target:
         entity_id: '{{ climate_entity }}'
       data:
-        temperature: '{{ night_temperature | float }}'
+        temperature: '{{ [heating_min_temp, [night_temperature | float, heating_max_temp] | min] | max }}'
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
@@ -129,7 +163,7 @@ action:
       target:
         entity_id: '{{ climate_entity }}'
       data:
-        temperature: '{{ night_temperature | float }}'
+        temperature: '{{ [heating_min_temp, [night_temperature | float, heating_max_temp] | min] | max }}'
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
@@ -149,7 +183,7 @@ action:
       target:
         entity_id: '{{ climate_entity }}'
       data:
-        temperature: '{{ day_temperature | float }}'
+        temperature: '{{ [heating_min_temp, [day_temperature | float, heating_max_temp] | min] | max }}'
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
@@ -169,7 +203,7 @@ action:
       target:
         entity_id: '{{ climate_entity }}'
       data:
-        temperature: '{{ day_temperature | float }}'
+        temperature: '{{ [heating_min_temp, [day_temperature | float, heating_max_temp] | min] | max }}'
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
