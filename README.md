@@ -1,4 +1,4 @@
-# Home Assistant Blueprints by Lachyn
+# Home Assistant Blueprints
 
 Welcome to my collection of Home Assistant blueprints. These blueprints are designed to help you automate your home heating and hot water systems with ease.
 
