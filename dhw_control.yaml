@@ -17,26 +17,6 @@ blueprint:
           - water_heater
           multiple: false
           reorder: false
-    dhw_max_temp_entity:
-      name: DHW Maximum Temperature Entity
-      description: Entity that contains the maximum allowed DHW temperature (e.g., number.opentherm_dhw_max_temp).
-      selector:
-        entity:
-          domain:
-          - number
-          - input_number
-          multiple: false
-      default: ''
-    dhw_min_temp_entity:
-      name: DHW Minimum Temperature Entity
-      description: Entity that contains the minimum allowed DHW temperature (e.g., number.opentherm_dhw_min_temp).
-      selector:
-        entity:
-          domain:
-          - number
-          - input_number
-          multiple: false
-      default: ''
     day_temp:
       name: Day (Comfort) Temperature
       description: Target temperature during active hours.
@@ -148,20 +128,6 @@ blueprint:
   source_url: https://github.com/lachyn/ha-blueprints/blob/main/dhw_control.yaml
 variables:
   dhw_entity: !input dhw_entity
-  dhw_max_temp_entity: !input dhw_max_temp_entity
-  dhw_min_temp_entity: !input dhw_min_temp_entity
-  dhw_max_temp: >-
-    {% if dhw_max_temp_entity != '' %}
-      {{ states(dhw_max_temp_entity) | float(80) }}
-    {% else %}
-      80
-    {% endif %}
-  dhw_min_temp: >-
-    {% if dhw_min_temp_entity != '' %}
-      {{ states(dhw_min_temp_entity) | float(20) }}
-    {% else %}
-      20
-    {% endif %}
   day_temp: !input day_temp
   night_temp: !input night_temp
   weekday_day_start: !input weekday_day_start
@@ -204,7 +170,7 @@ action:
       target:
         entity_id: !input dhw_entity
       data:
-        temperature: "{{ [dhw_min_temp, [legionella_temp | float, dhw_max_temp] | min] | max }}"
+        temperature: "{{ legionella_temp | float }}"
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
@@ -238,7 +204,7 @@ action:
       target:
         entity_id: !input dhw_entity
       data:
-        temperature: "{{ [dhw_min_temp, [restore_temp | float, dhw_max_temp] | min] | max }}"
+        temperature: "{{ restore_temp | float }}"
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
@@ -274,7 +240,7 @@ action:
       target:
         entity_id: !input dhw_entity
       data:
-        temperature: "{{ [dhw_min_temp, [schedule_temp | float, dhw_max_temp] | min] | max }}"
+        temperature: "{{ schedule_temp | float }}"
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
