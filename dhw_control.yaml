@@ -170,7 +170,7 @@ action:
       target:
         entity_id: !input dhw_entity
       data:
-        temperature: !input legionella_temp
+        temperature: "{{ legionella_temp | float }}"
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
@@ -180,20 +180,31 @@ action:
           title: "\U0001F9A0 Legionella Cycle Started"
           message: DHW temperature set to {{ legionella_temp }}°C for protection.
     - delay: !input legionella_duration
+    - variables:
+        restore_temp: >-
+          {% set t = now().time() %}
+          {% set d = now().weekday() %}
+          {% set is_weekend = d >= 5 %}
+          {% if is_weekend %}
+            {% set start = strptime(weekend_day_start, '%H:%M:%S').time() %}
+            {% set end = strptime(weekend_day_end, '%H:%M:%S').time() %}
+          {% else %}
+            {% set start = strptime(weekday_day_start, '%H:%M:%S').time() %}
+            {% set end = strptime(weekday_day_end, '%H:%M:%S').time() %}
+          {% endif %}
+          {% if start < end %}
+            {% set is_active = start <= t < end %}
+          {% else %}
+            {% set is_active = start <= t or t < end %}
+          {% endif %}
+          {{ (day_temp if is_active else night_temp) | float }}
     - alias: Restore Schedule after Legionella
       service: '{{ ''climate.set_temperature'' if dhw_entity.startswith(''climate.'')
         else ''water_heater.set_temperature'' }}'
       target:
         entity_id: !input dhw_entity
       data:
-        temperature: "{% set t = now().time() %} {% set d = now().weekday() %} {%
-          set is_weekend = d >= 5 %} {% if is_weekend %}\n  {% set start = strptime(weekend_day_start,
-          '%H:%M:%S').time() %}\n  {% set end = strptime(weekend_day_end, '%H:%M:%S').time()
-          %}\n{% else %}\n  {% set start = strptime(weekday_day_start, '%H:%M:%S').time()
-          %}\n  {% set end = strptime(weekday_day_end, '%H:%M:%S').time() %}\n{% endif
-          %}\n{% if start < end %}\n  {% set is_active = start <= t < end %}\n{% else
-          %}\n  {% set is_active = start <= t or t < end %}\n{% endif %}\n{{ day_temp
-          if is_active else night_temp }}\n"
+        temperature: "{{ restore_temp | float }}"
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
@@ -201,24 +212,35 @@ action:
       - service: notify.notify
         data:
           title: ✅ Legionella Cycle Finished
-          message: DHW temperature restored to schedule.
+          message: DHW temperature restored to schedule ({{ restore_temp }}°C).
   - conditions:
     - condition: trigger
       id: schedule
     sequence:
+    - variables:
+        schedule_temp: >-
+          {% set t = now().time() %}
+          {% set d = now().weekday() %}
+          {% set is_weekend = d >= 5 %}
+          {% if is_weekend %}
+            {% set start = strptime(weekend_day_start, '%H:%M:%S').time() %}
+            {% set end = strptime(weekend_day_end, '%H:%M:%S').time() %}
+          {% else %}
+            {% set start = strptime(weekday_day_start, '%H:%M:%S').time() %}
+            {% set end = strptime(weekday_day_end, '%H:%M:%S').time() %}
+          {% endif %}
+          {% if start < end %}
+            {% set is_active = start <= t < end %}
+          {% else %}
+            {% set is_active = start <= t or t < end %}
+          {% endif %}
+          {{ (day_temp if is_active else night_temp) | float }}
     - service: '{{ ''climate.set_temperature'' if dhw_entity.startswith(''climate.'')
         else ''water_heater.set_temperature'' }}'
       target:
         entity_id: !input dhw_entity
       data:
-        temperature: "{% set t = now().time() %} {% set d = now().weekday() %} {%
-          set is_weekend = d >= 5 %} {% if is_weekend %}\n  {% set start = strptime(weekend_day_start,
-          '%H:%M:%S').time() %}\n  {% set end = strptime(weekend_day_end, '%H:%M:%S').time()
-          %}\n{% else %}\n  {% set start = strptime(weekday_day_start, '%H:%M:%S').time()
-          %}\n  {% set end = strptime(weekday_day_end, '%H:%M:%S').time() %}\n{% endif
-          %}\n{% if start < end %}\n  {% set is_active = start <= t < end %}\n{% else
-          %}\n  {% set is_active = start <= t or t < end %}\n{% endif %}\n{{ day_temp
-          if is_active else night_temp }}\n"
+        temperature: "{{ schedule_temp | float }}"
     - if:
       - condition: template
         value_template: '{{ notifications_enabled }}'
@@ -226,6 +248,5 @@ action:
       - service: notify.notify
         data:
           title: "\U0001F6BF DHW Schedule Update"
-          message: DHW temperature set to {{ day_temp if is_active else night_temp
-            }}°C.
+          message: DHW temperature set to {{ schedule_temp }}°C.
 mode: single
